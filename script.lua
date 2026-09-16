@@ -1,950 +1,390 @@
---==================================================
--- MIRACLE SYSTEM
--- AUTO LOOT + AFK PROTECTION
---==================================================
+--========================================================--
+--                 MIRACLE AUTO SYSTEM
+--              AUTO CLICK + AUTO LOOT
+--========================================================--
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local VirtualUser = game:GetService("VirtualUser")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
 
---==================================================
+--========================================================--
 -- SETTINGS
---==================================================
+--========================================================--
 
+local AutoClick = false
 local AutoLoot = true
-local AutoLootLoopRunning = false
 
--- AFK เปิดตลอด ไม่มีปุ่มเปิด/ปิด
-local AFK_PROTECTION = true
-local AFK_INTERVAL = 60
+local AutoLootLoopRunning = false
+local SelectingPosition = false
+
+local ClickX = 0
+local ClickY = 0
+local ClickInterval = 1
 
 local LOOT_SCAN_DELAY = 0.15
 
---==================================================
--- COLORS
---==================================================
-
-local BLACK = Color3.fromRGB(3, 7, 14)
-local PANEL = Color3.fromRGB(6, 12, 22)
-local PANEL2 = Color3.fromRGB(10, 19, 32)
-
-local BLUE = Color3.fromRGB(0, 155, 255)
-local BLUE2 = Color3.fromRGB(0, 210, 255)
-local BLUE_DARK = Color3.fromRGB(0, 70, 120)
-
-local WHITE = Color3.fromRGB(245, 250, 255)
-local GRAY = Color3.fromRGB(115, 140, 165)
-
-local GREEN = Color3.fromRGB(45, 235, 140)
-
---==================================================
+--========================================================--
 -- REMOVE OLD UI
---==================================================
+--========================================================--
 
-local OldGui = CoreGui:FindFirstChild("MIRACLE_SYSTEM")
-
-if OldGui then
-    OldGui:Destroy()
+local OldGui1 = CoreGui:FindFirstChild("MIRACLE_AUTO_CLICKER")
+if OldGui1 then
+    OldGui1:Destroy()
 end
 
---==================================================
+local OldGui2 = CoreGui:FindFirstChild("LootTeleportSystem")
+if OldGui2 then
+    OldGui2:Destroy()
+end
+
+--========================================================--
 -- SCREEN GUI
---==================================================
+--========================================================--
 
 local ScreenGui = Instance.new("ScreenGui")
-
-ScreenGui.Name = "MIRACLE_SYSTEM"
+ScreenGui.Name = "MIRACLE_AUTO_CLICKER"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
 ScreenGui.Parent = CoreGui
 
---==================================================
+--========================================================--
+-- COLORS
+--========================================================--
+
+local BG = Color3.fromRGB(10, 18, 30)
+local CARD = Color3.fromRGB(15, 29, 44)
+local HEADER = Color3.fromRGB(16, 39, 62)
+
+local BLUE = Color3.fromRGB(25, 135, 210)
+local BLUE_LIGHT = Color3.fromRGB(55, 175, 240)
+
+local TEXT = Color3.fromRGB(235, 248, 255)
+local SUBTEXT = Color3.fromRGB(135, 190, 220)
+
+local OFF = Color3.fromRGB(30, 55, 72)
+
+--========================================================--
 -- SHADOW
---==================================================
+--========================================================--
 
 local Shadow = Instance.new("Frame")
-
 Shadow.Name = "Shadow"
-
-Shadow.Size = UDim2.new(0, 364, 0, 304)
-
-Shadow.Position = UDim2.new(
-    0.5,
-    -182,
-    0.5,
-    -152
-)
-
+Shadow.Size = UDim2.new(0, 360, 0, 360)
+Shadow.Position = UDim2.new(0.5, -176, 0.5, -111)
 Shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Shadow.BackgroundTransparency = 0.55
+Shadow.BackgroundTransparency = 0.65
 Shadow.BorderSizePixel = 0
 Shadow.ZIndex = 0
-
 Shadow.Parent = ScreenGui
 
 local ShadowCorner = Instance.new("UICorner")
-
-ShadowCorner.CornerRadius = UDim.new(0, 22)
+ShadowCorner.CornerRadius = UDim.new(0, 18)
 ShadowCorner.Parent = Shadow
 
---==================================================
+--========================================================--
 -- MAIN
---==================================================
+--========================================================--
 
 local Main = Instance.new("Frame")
-
 Main.Name = "Main"
-
-Main.Size = UDim2.new(0, 360, 0, 300)
-
-Main.Position = UDim2.new(
-    0.5,
-    -180,
-    0.5,
-    -150
-)
-
-Main.BackgroundColor3 = BLACK
+Main.Size = UDim2.new(0, 360, 0, 360)
+Main.Position = UDim2.new(0.5, -180, 0.5, -180)
+Main.BackgroundColor3 = BG
 Main.BorderSizePixel = 0
-Main.ZIndex = 1
-
+Main.ZIndex = 2
 Main.Parent = ScreenGui
 
---==================================================
--- MAIN CORNER
---==================================================
-
 local MainCorner = Instance.new("UICorner")
-
-MainCorner.CornerRadius = UDim.new(0, 20)
+MainCorner.CornerRadius = UDim.new(0, 16)
 MainCorner.Parent = Main
 
---==================================================
--- MAIN STROKE
---==================================================
-
 local MainStroke = Instance.new("UIStroke")
-
-MainStroke.Color = BLUE
+MainStroke.Color = BLUE_LIGHT
 MainStroke.Thickness = 1.5
-MainStroke.Transparency = 0.1
-
+MainStroke.Transparency = 0.2
 MainStroke.Parent = Main
 
---==================================================
--- INNER
---==================================================
-
-local Inner = Instance.new("Frame")
-
-Inner.Name = "Inner"
-
-Inner.Size = UDim2.new(
-    1,
-    -4,
-    1,
-    -4
-)
-
-Inner.Position = UDim2.new(
-    0,
-    2,
-    0,
-    2
-)
-
-Inner.BackgroundColor3 = PANEL
-Inner.BorderSizePixel = 0
-Inner.ZIndex = 2
-
-Inner.Parent = Main
-
-local InnerCorner = Instance.new("UICorner")
-
-InnerCorner.CornerRadius = UDim.new(0, 18)
-InnerCorner.Parent = Inner
-
---==================================================
+--========================================================--
 -- HEADER
---==================================================
+--========================================================--
 
 local Header = Instance.new("Frame")
-
-Header.Name = "Header"
-
-Header.Size = UDim2.new(
-    1,
-    -2,
-    0,
-    62
-)
-
-Header.Position = UDim2.new(
-    0,
-    1,
-    0,
-    1
-)
-
-Header.BackgroundColor3 = PANEL2
+Header.Name = "DragHandle"
+Header.Size = UDim2.new(1, 0, 0, 76)
+Header.BackgroundColor3 = HEADER
 Header.BorderSizePixel = 0
 Header.ZIndex = 3
-
-Header.Parent = Inner
+Header.Parent = Main
 
 local HeaderCorner = Instance.new("UICorner")
-
-HeaderCorner.CornerRadius = UDim.new(0, 17)
+HeaderCorner.CornerRadius = UDim.new(0, 16)
 HeaderCorner.Parent = Header
 
---==================================================
--- HEADER BOTTOM
---==================================================
-
-local HeaderBottom = Instance.new("Frame")
-
-HeaderBottom.Size = UDim2.new(
-    1,
-    0,
-    0,
-    18
-)
-
-HeaderBottom.Position = UDim2.new(
-    0,
-    0,
-    1,
-    -18
-)
-
-HeaderBottom.BackgroundColor3 = PANEL2
-HeaderBottom.BorderSizePixel = 0
-HeaderBottom.ZIndex = 3
-
-HeaderBottom.Parent = Header
-
---==================================================
--- LOGO
---==================================================
-
-local Logo = Instance.new("Frame")
-
-Logo.Size = UDim2.new(
-    0,
-    40,
-    0,
-    40
-)
-
-Logo.Position = UDim2.new(
-    0,
-    16,
-    0,
-    11
-)
-
-Logo.BackgroundColor3 = BLUE_DARK
+local Logo = Instance.new("TextLabel")
+Logo.Size = UDim2.new(0, 44, 0, 44)
+Logo.Position = UDim2.new(0, 16, 0, 16)
+Logo.BackgroundColor3 = BLUE
 Logo.BorderSizePixel = 0
-Logo.ZIndex = 6
-
+Logo.Text = "M"
+Logo.TextColor3 = TEXT
+Logo.TextSize = 22
+Logo.Font = Enum.Font.GothamBold
+Logo.ZIndex = 4
 Logo.Parent = Header
 
 local LogoCorner = Instance.new("UICorner")
-
-LogoCorner.CornerRadius = UDim.new(0, 11)
+LogoCorner.CornerRadius = UDim.new(0, 12)
 LogoCorner.Parent = Logo
 
-local LogoStroke = Instance.new("UIStroke")
-
-LogoStroke.Color = BLUE2
-LogoStroke.Thickness = 1
-LogoStroke.Transparency = 0.15
-
-LogoStroke.Parent = Logo
-
-local LogoText = Instance.new("TextLabel")
-
-LogoText.Size = UDim2.new(1, 0, 1, 0)
-
-LogoText.BackgroundTransparency = 1
-
-LogoText.Text = "M"
-
-LogoText.TextColor3 = BLUE2
-LogoText.TextSize = 21
-LogoText.Font = Enum.Font.GothamBlack
-
-LogoText.ZIndex = 7
-
-LogoText.Parent = Logo
-
---==================================================
--- TITLE
---==================================================
-
 local Title = Instance.new("TextLabel")
-
-Title.Size = UDim2.new(
-    1,
-    -125,
-    0,
-    24
-)
-
-Title.Position = UDim2.new(
-    0,
-    68,
-    0,
-    10
-)
-
+Title.Size = UDim2.new(1, -120, 0, 28)
+Title.Position = UDim2.new(0, 70, 0, 14)
 Title.BackgroundTransparency = 1
-
-Title.Text = "MIRACLE SYSTEM"
-
-Title.TextColor3 = WHITE
-Title.TextSize = 16
+Title.Text = "MIRACLE AUTO"
+Title.TextColor3 = TEXT
+Title.TextSize = 19
 Title.Font = Enum.Font.GothamBold
-
 Title.TextXAlignment = Enum.TextXAlignment.Left
-
-Title.ZIndex = 6
-
+Title.ZIndex = 4
 Title.Parent = Header
 
---==================================================
--- SUBTITLE
---==================================================
-
 local Subtitle = Instance.new("TextLabel")
-
-Subtitle.Size = UDim2.new(
-    1,
-    -125,
-    0,
-    17
-)
-
-Subtitle.Position = UDim2.new(
-    0,
-    68,
-    0,
-    34
-)
-
+Subtitle.Size = UDim2.new(1, -120, 0, 20)
+Subtitle.Position = UDim2.new(0, 70, 0, 40)
 Subtitle.BackgroundTransparency = 1
-
-Subtitle.Text = "AUTO LOOT  •  AFK PROTECTION"
-
-Subtitle.TextColor3 = BLUE2
-Subtitle.TextSize = 9
-Subtitle.Font = Enum.Font.GothamBold
-
+Subtitle.Text = "AUTO CLICK  •  AUTO LOOT"
+Subtitle.TextColor3 = SUBTEXT
+Subtitle.TextSize = 10
+Subtitle.Font = Enum.Font.Gotham
 Subtitle.TextXAlignment = Enum.TextXAlignment.Left
-
-Subtitle.ZIndex = 6
-
+Subtitle.ZIndex = 4
 Subtitle.Parent = Header
 
---==================================================
--- MINIMIZE BUTTON
---==================================================
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 34, 0, 34)
+CloseButton.Position = UDim2.new(1, -48, 0, 20)
+CloseButton.BackgroundColor3 = Color3.fromRGB(24, 60, 82)
+CloseButton.BorderSizePixel = 0
+CloseButton.Text = "×"
+CloseButton.TextColor3 = TEXT
+CloseButton.TextSize = 23
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.AutoButtonColor = false
+CloseButton.ZIndex = 5
+CloseButton.Parent = Header
 
-local Minimize = Instance.new("TextButton")
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 9)
+CloseCorner.Parent = CloseButton
 
-Minimize.Size = UDim2.new(
-    0,
-    36,
-    0,
-    36
-)
-
-Minimize.Position = UDim2.new(
-    1,
-    -49,
-    0,
-    12
-)
-
-Minimize.BackgroundColor3 =
-    Color3.fromRGB(14, 26, 43)
-
-Minimize.BorderSizePixel = 0
-
-Minimize.Text = "−"
-
-Minimize.TextColor3 = GRAY
-Minimize.TextSize = 20
-Minimize.Font = Enum.Font.GothamBold
-
-Minimize.AutoButtonColor = false
-
-Minimize.ZIndex = 8
-
-Minimize.Parent = Header
-
-local MinCorner = Instance.new("UICorner")
-
-MinCorner.CornerRadius = UDim.new(0, 10)
-MinCorner.Parent = Minimize
-
---==================================================
--- CONTENT
---==================================================
-
-local Content = Instance.new("Frame")
-
-Content.Name = "Content"
-
-Content.Size = UDim2.new(
-    1,
-    -30,
-    1,
-    -76
-)
-
-Content.Position = UDim2.new(
-    0,
-    15,
-    0,
-    70
-)
-
-Content.BackgroundTransparency = 1
-Content.BorderSizePixel = 0
-Content.ZIndex = 4
-
-Content.Parent = Inner
-
---==================================================
--- AUTO LOOT STATUS CARD
---==================================================
-
-local LootStatus = Instance.new("Frame")
-
-LootStatus.Size = UDim2.new(
-    1,
-    0,
-    0,
-    55
-)
-
-LootStatus.Position = UDim2.new(
-    0,
-    0,
-    0,
-    0
-)
-
-LootStatus.BackgroundColor3 =
-    Color3.fromRGB(7, 17, 29)
-
-LootStatus.BorderSizePixel = 0
-LootStatus.ZIndex = 5
-
-LootStatus.Parent = Content
-
-local LootStatusCorner = Instance.new("UICorner")
-
-LootStatusCorner.CornerRadius = UDim.new(0, 13)
-LootStatusCorner.Parent = LootStatus
-
-local LootStatusStroke = Instance.new("UIStroke")
-
-LootStatusStroke.Color = BLUE
-LootStatusStroke.Thickness = 1
-LootStatusStroke.Transparency = 0.65
-
-LootStatusStroke.Parent = LootStatus
-
---==================================================
--- LOOT ICON
---==================================================
-
-local LootIcon = Instance.new("Frame")
-
-LootIcon.Size = UDim2.new(
-    0,
-    32,
-    0,
-    32
-)
-
-LootIcon.Position = UDim2.new(
-    0,
-    11,
-    0.5,
-    -16
-)
-
-LootIcon.BackgroundColor3 =
-    Color3.fromRGB(8, 50, 75)
-
-LootIcon.BorderSizePixel = 0
-LootIcon.ZIndex = 6
-
-LootIcon.Parent = LootStatus
-
-local LootIconCorner = Instance.new("UICorner")
-
-LootIconCorner.CornerRadius = UDim.new(0, 10)
-LootIconCorner.Parent = LootIcon
-
-local LootIconText = Instance.new("TextLabel")
-
-LootIconText.Size = UDim2.new(1, 0, 1, 0)
-
-LootIconText.BackgroundTransparency = 1
-
-LootIconText.Text = "M"
-
-LootIconText.TextColor3 = BLUE2
-LootIconText.TextSize = 14
-LootIconText.Font = Enum.Font.GothamBlack
-
-LootIconText.ZIndex = 7
-
-LootIconText.Parent = LootIcon
-
---==================================================
--- LOOT STATUS TEXT
---==================================================
+--========================================================--
+-- STATUS
+--========================================================--
 
 local Status = Instance.new("TextLabel")
-
-Status.Size = UDim2.new(
-    1,
-    -65,
-    0,
-    22
-)
-
-Status.Position = UDim2.new(
-    0,
-    55,
-    0,
-    8
-)
-
-Status.BackgroundTransparency = 1
-
-Status.Text = "กำลังตรวจสอบ Loot..."
-
-Status.TextColor3 = WHITE
+Status.Size = UDim2.new(1, -36, 0, 46)
+Status.Position = UDim2.new(0, 18, 0, 88)
+Status.BackgroundColor3 = CARD
+Status.BorderSizePixel = 0
+Status.Text = "🧲 กำลังตรวจสอบ Loot..."
+Status.TextColor3 = TEXT
 Status.TextSize = 12
-Status.Font = Enum.Font.GothamBold
+Status.Font = Enum.Font.GothamMedium
+Status.ZIndex = 3
+Status.Parent = Main
 
-Status.TextXAlignment = Enum.TextXAlignment.Left
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 11)
+StatusCorner.Parent = Status
 
-Status.ZIndex = 6
+local StatusStroke = Instance.new("UIStroke")
+StatusStroke.Color = BLUE
+StatusStroke.Transparency = 0.55
+StatusStroke.Parent = Status
 
-Status.Parent = LootStatus
+--========================================================--
+-- POSITION CARD
+--========================================================--
 
-local LootSubStatus = Instance.new("TextLabel")
+local PositionCard = Instance.new("Frame")
+PositionCard.Size = UDim2.new(1, -36, 0, 58)
+PositionCard.Position = UDim2.new(0, 18, 0, 144)
+PositionCard.BackgroundColor3 = CARD
+PositionCard.BorderSizePixel = 0
+PositionCard.ZIndex = 3
+PositionCard.Parent = Main
 
-LootSubStatus.Size = UDim2.new(
-    1,
-    -65,
-    0,
-    17
-)
+local PositionCorner = Instance.new("UICorner")
+PositionCorner.CornerRadius = UDim.new(0, 11)
+PositionCorner.Parent = PositionCard
 
-LootSubStatus.Position = UDim2.new(
-    0,
-    55,
-    0,
-    31
-)
+local PositionTitle = Instance.new("TextLabel")
+PositionTitle.Size = UDim2.new(0, 100, 1, 0)
+PositionTitle.Position = UDim2.new(0, 12, 0, 0)
+PositionTitle.BackgroundTransparency = 1
+PositionTitle.Text = "CLICK POINT"
+PositionTitle.TextColor3 = SUBTEXT
+PositionTitle.TextSize = 10
+PositionTitle.Font = Enum.Font.GothamBold
+PositionTitle.TextXAlignment = Enum.TextXAlignment.Left
+PositionTitle.ZIndex = 4
+PositionTitle.Parent = PositionCard
 
-LootSubStatus.BackgroundTransparency = 1
+local PositionText = Instance.new("TextLabel")
+PositionText.Size = UDim2.new(0, 130, 1, 0)
+PositionText.Position = UDim2.new(0, 105, 0, 0)
+PositionText.BackgroundTransparency = 1
+PositionText.Text = "X: 0    Y: 0"
+PositionText.TextColor3 = TEXT
+PositionText.TextSize = 11
+PositionText.Font = Enum.Font.GothamMedium
+PositionText.ZIndex = 4
+PositionText.Parent = PositionCard
 
-LootSubStatus.Text = "AUTO LOOT ACTIVE"
+local SelectButton = Instance.new("TextButton")
+SelectButton.Size = UDim2.new(0, 82, 0, 36)
+SelectButton.Position = UDim2.new(1, -94, 0, 11)
+SelectButton.BackgroundColor3 = BLUE
+SelectButton.BorderSizePixel = 0
+SelectButton.Text = "SELECT"
+SelectButton.TextColor3 = TEXT
+SelectButton.TextSize = 10
+SelectButton.Font = Enum.Font.GothamBold
+SelectButton.AutoButtonColor = false
+SelectButton.ZIndex = 4
+SelectButton.Parent = PositionCard
 
-LootSubStatus.TextColor3 = GRAY
-LootSubStatus.TextSize = 9
-LootSubStatus.Font = Enum.Font.GothamMedium
+local SelectCorner = Instance.new("UICorner")
+SelectCorner.CornerRadius = UDim.new(0, 9)
+SelectCorner.Parent = SelectButton
 
-LootSubStatus.TextXAlignment = Enum.TextXAlignment.Left
+--========================================================--
+-- INTERVAL
+--========================================================--
 
-LootSubStatus.ZIndex = 6
+local IntervalLabel = Instance.new("TextLabel")
+IntervalLabel.Size = UDim2.new(0, 110, 0, 38)
+IntervalLabel.Position = UDim2.new(0, 18, 0, 216)
+IntervalLabel.BackgroundTransparency = 1
+IntervalLabel.Text = "CLICK INTERVAL"
+IntervalLabel.TextColor3 = SUBTEXT
+IntervalLabel.TextSize = 10
+IntervalLabel.Font = Enum.Font.GothamBold
+IntervalLabel.TextXAlignment = Enum.TextXAlignment.Left
+IntervalLabel.ZIndex = 3
+IntervalLabel.Parent = Main
 
-LootSubStatus.Parent = LootStatus
+local IntervalBox = Instance.new("TextBox")
+IntervalBox.Size = UDim2.new(0, 100, 0, 36)
+IntervalBox.Position = UDim2.new(1, -118, 0, 217)
+IntervalBox.BackgroundColor3 = CARD
+IntervalBox.BorderSizePixel = 0
+IntervalBox.Text = "1"
+IntervalBox.PlaceholderText = "0.1"
+IntervalBox.TextColor3 = TEXT
+IntervalBox.PlaceholderColor3 = SUBTEXT
+IntervalBox.TextSize = 12
+IntervalBox.Font = Enum.Font.GothamMedium
+IntervalBox.ClearTextOnFocus = false
+IntervalBox.ZIndex = 4
+IntervalBox.Parent = Main
 
---==================================================
+local IntervalCorner = Instance.new("UICorner")
+IntervalCorner.CornerRadius = UDim.new(0, 9)
+IntervalCorner.Parent = IntervalBox
+
+local IntervalStroke = Instance.new("UIStroke")
+IntervalStroke.Color = BLUE
+IntervalStroke.Transparency = 0.55
+IntervalStroke.Parent = IntervalBox
+
+--========================================================--
+-- AUTO CLICK BUTTON
+--========================================================--
+
+local AutoClickButton = Instance.new("TextButton")
+AutoClickButton.Size = UDim2.new(1, -36, 0, 42)
+AutoClickButton.Position = UDim2.new(0, 18, 0, 264)
+AutoClickButton.BackgroundColor3 = OFF
+AutoClickButton.BorderSizePixel = 0
+AutoClickButton.Text = "🔴  AUTO CLICK : OFF"
+AutoClickButton.TextColor3 = TEXT
+AutoClickButton.TextSize = 12
+AutoClickButton.Font = Enum.Font.GothamBold
+AutoClickButton.AutoButtonColor = false
+AutoClickButton.ZIndex = 4
+AutoClickButton.Parent = Main
+
+local AutoClickCorner = Instance.new("UICorner")
+AutoClickCorner.CornerRadius = UDim.new(0, 10)
+AutoClickCorner.Parent = AutoClickButton
+
+local AutoClickStroke = Instance.new("UIStroke")
+AutoClickStroke.Color = BLUE
+AutoClickStroke.Transparency = 0.45
+AutoClickStroke.Parent = AutoClickButton
+
+--========================================================--
 -- AUTO LOOT BUTTON
---==================================================
+--========================================================--
 
 local AutoLootButton = Instance.new("TextButton")
-
-AutoLootButton.Name = "AutoLoot"
-
-AutoLootButton.Size = UDim2.new(
-    1,
-    0,
-    0,
-    46
-)
-
-AutoLootButton.Position = UDim2.new(
-    0,
-    0,
-    0,
-    67
-)
-
+AutoLootButton.Size = UDim2.new(1, -36, 0, 42)
+AutoLootButton.Position = UDim2.new(0, 18, 0, 312)
 AutoLootButton.BackgroundColor3 = BLUE
-
 AutoLootButton.BorderSizePixel = 0
-
-AutoLootButton.Text = ""
-
+AutoLootButton.Text = "🟢  AUTO LOOT : ON"
+AutoLootButton.TextColor3 = TEXT
+AutoLootButton.TextSize = 12
+AutoLootButton.Font = Enum.Font.GothamBold
 AutoLootButton.AutoButtonColor = false
-
-AutoLootButton.ZIndex = 5
-
-AutoLootButton.Parent = Content
+AutoLootButton.ZIndex = 4
+AutoLootButton.Parent = Main
 
 local AutoLootCorner = Instance.new("UICorner")
-
-AutoLootCorner.CornerRadius = UDim.new(0, 13)
+AutoLootCorner.CornerRadius = UDim.new(0, 10)
 AutoLootCorner.Parent = AutoLootButton
 
 local AutoLootStroke = Instance.new("UIStroke")
-
-AutoLootStroke.Color = BLUE2
-AutoLootStroke.Thickness = 1
-AutoLootStroke.Transparency = 0.25
-
+AutoLootStroke.Color = BLUE_LIGHT
+AutoLootStroke.Transparency = 0.35
 AutoLootStroke.Parent = AutoLootButton
 
-local AutoLootText = Instance.new("TextLabel")
-
-AutoLootText.Size = UDim2.new(
-    1,
-    -75,
-    1,
-    0
-)
-
-AutoLootText.Position = UDim2.new(
-    0,
-    16,
-    0,
-    0
-)
-
-AutoLootText.BackgroundTransparency = 1
-
-AutoLootText.Text = "AUTO LOOT"
-
-AutoLootText.TextColor3 = WHITE
-AutoLootText.TextSize = 12
-AutoLootText.Font = Enum.Font.GothamBold
-
-AutoLootText.TextXAlignment = Enum.TextXAlignment.Left
-
-AutoLootText.ZIndex = 6
-
-AutoLootText.Parent = AutoLootButton
-
-local AutoLootState = Instance.new("TextLabel")
-
-AutoLootState.Size = UDim2.new(
-    0,
-    50,
-    1,
-    0
-)
-
-AutoLootState.Position = UDim2.new(
-    1,
-    -62,
-    0,
-    0
-)
-
-AutoLootState.BackgroundTransparency = 1
-
-AutoLootState.Text = "ON"
-
-AutoLootState.TextColor3 = WHITE
-AutoLootState.TextSize = 11
-AutoLootState.Font = Enum.Font.GothamBlack
-
-AutoLootState.TextXAlignment = Enum.TextXAlignment.Right
-
-AutoLootState.ZIndex = 6
-
-AutoLootState.Parent = AutoLootButton
-
---==================================================
--- AFK STATUS
---==================================================
-
-local AFKStatus = Instance.new("Frame")
-
-AFKStatus.Size = UDim2.new(
-    1,
-    0,
-    0,
-    55
-)
-
-AFKStatus.Position = UDim2.new(
-    0,
-    0,
-    0,
-    124
-)
-
-AFKStatus.BackgroundColor3 =
-    Color3.fromRGB(7, 22, 25)
-
-AFKStatus.BorderSizePixel = 0
-AFKStatus.ZIndex = 5
-
-AFKStatus.Parent = Content
-
-local AFKCorner = Instance.new("UICorner")
-
-AFKCorner.CornerRadius = UDim.new(0, 13)
-AFKCorner.Parent = AFKStatus
-
-local AFKStroke = Instance.new("UIStroke")
-
-AFKStroke.Color = GREEN
-AFKStroke.Thickness = 1
-AFKStroke.Transparency = 0.7
-
-AFKStroke.Parent = AFKStatus
-
---==================================================
--- AFK ICON
---==================================================
-
-local AFKIcon = Instance.new("Frame")
-
-AFKIcon.Size = UDim2.new(
-    0,
-    30,
-    0,
-    30
-)
-
-AFKIcon.Position = UDim2.new(
-    0,
-    11,
-    0.5,
-    -15
-)
-
-AFKIcon.BackgroundColor3 =
-    Color3.fromRGB(12, 65, 52)
-
-AFKIcon.BorderSizePixel = 0
-
-AFKIcon.ZIndex = 6
-
-AFKIcon.Parent = AFKStatus
-
-local AFKIconCorner = Instance.new("UICorner")
-
-AFKIconCorner.CornerRadius = UDim.new(1, 0)
-AFKIconCorner.Parent = AFKIcon
-
-local AFKDot = Instance.new("Frame")
-
-AFKDot.Size = UDim2.new(
-    0,
-    9,
-    0,
-    9
-)
-
-AFKDot.Position = UDim2.new(
-    0.5,
-    -4.5,
-    0.5,
-    -4.5
-)
-
-AFKDot.BackgroundColor3 = GREEN
-
-AFKDot.BorderSizePixel = 0
-
-AFKDot.ZIndex = 7
-
-AFKDot.Parent = AFKIcon
-
-local AFKDotCorner = Instance.new("UICorner")
-
-AFKDotCorner.CornerRadius = UDim.new(1, 0)
-AFKDotCorner.Parent = AFKDot
-
---==================================================
--- AFK TEXT
---==================================================
-
-local AFKTitle = Instance.new("TextLabel")
-
-AFKTitle.Size = UDim2.new(
-    1,
-    -65,
-    0,
-    20
-)
-
-AFKTitle.Position = UDim2.new(
-    0,
-    52,
-    0,
-    8
-)
-
-AFKTitle.BackgroundTransparency = 1
-
-AFKTitle.Text = "AFK PROTECTION ACTIVE"
-
-AFKTitle.TextColor3 = GREEN
-AFKTitle.TextSize = 12
-AFKTitle.Font = Enum.Font.GothamBold
-
-AFKTitle.TextXAlignment = Enum.TextXAlignment.Left
-
-AFKTitle.ZIndex = 6
-
-AFKTitle.Parent = AFKStatus
-
-local AFKActivity = Instance.new("TextLabel")
-
-AFKActivity.Size = UDim2.new(
-    1,
-    -65,
-    0,
-    16
-)
-
-AFKActivity.Position = UDim2.new(
-    0,
-    52,
-    0,
-    29
-)
-
-AFKActivity.BackgroundTransparency = 1
-
-AFKActivity.Text = "Activity protection • ON"
-
-AFKActivity.TextColor3 = GRAY
-AFKActivity.TextSize = 9
-AFKActivity.Font = Enum.Font.GothamMedium
-
-AFKActivity.TextXAlignment = Enum.TextXAlignment.Left
-
-AFKActivity.ZIndex = 6
-
-AFKActivity.Parent = AFKStatus
-
---==================================================
--- FOOTER
---==================================================
-
-local Footer = Instance.new("TextLabel")
-
-Footer.Size = UDim2.new(
-    1,
-    0,
-    0,
-    16
-)
-
-Footer.Position = UDim2.new(
-    0,
-    0,
-    1,
-    -17
-)
-
-Footer.BackgroundTransparency = 1
-
-Footer.Text = "MIRACLE SYSTEM  •  LOOT + AFK"
-
-Footer.TextColor3 =
-    Color3.fromRGB(65, 90, 120)
-
-Footer.TextSize = 9
-Footer.Font = Enum.Font.GothamBold
-
-Footer.TextXAlignment = Enum.TextXAlignment.Center
-
-Footer.ZIndex = 5
-
-Footer.Parent = Content
-
---==================================================
+--========================================================--
 -- OPEN BUTTON
---==================================================
+--========================================================--
 
 local OpenButton = Instance.new("TextButton")
-
 OpenButton.Name = "OpenButton"
-
-OpenButton.Size = UDim2.new(
-    0,
-    62,
-    0,
-    62
-)
-
-OpenButton.Position = UDim2.new(
-    0.5,
-    -31,
-    0.5,
-    -31
-)
-
-OpenButton.BackgroundColor3 = BLACK
-
+OpenButton.Size = UDim2.new(0, 58, 0, 58)
+OpenButton.Position = UDim2.new(0.5, -29, 0.5, -29)
+OpenButton.BackgroundColor3 = BLUE
 OpenButton.BorderSizePixel = 0
-
 OpenButton.Text = "M"
-
-OpenButton.TextColor3 = BLUE2
-
-OpenButton.TextSize = 18
-OpenButton.Font = Enum.Font.GothamBlack
-
+OpenButton.TextSize = 23
+OpenButton.Font = Enum.Font.GothamBold
+OpenButton.TextColor3 = TEXT
 OpenButton.Visible = false
-
-OpenButton.AutoButtonColor = false
-
 OpenButton.ZIndex = 10
-
 OpenButton.Parent = ScreenGui
 
 local OpenCorner = Instance.new("UICorner")
-
 OpenCorner.CornerRadius = UDim.new(1, 0)
 OpenCorner.Parent = OpenButton
 
 local OpenStroke = Instance.new("UIStroke")
-
-OpenStroke.Color = BLUE
+OpenStroke.Color = BLUE_LIGHT
 OpenStroke.Thickness = 2
-
 OpenStroke.Parent = OpenButton
 
---==================================================
--- GET LOOT
---==================================================
+--========================================================--
+-- AUTO LOOT
+--========================================================--
 
 local function GetLootObjects()
-
     local Loots = {}
     local Seen = {}
 
@@ -957,23 +397,13 @@ local function GetLootObjects()
         then
 
             Seen[Object] = true
-
-            table.insert(
-                Loots,
-                Object
-            )
+            table.insert(Loots, Object)
 
         end
-
     end
 
     return Loots
-
 end
-
---==================================================
--- COLLECT LOOT
---==================================================
 
 local function CollectLoot(Loot)
 
@@ -981,28 +411,19 @@ local function CollectLoot(Loot)
         return false
     end
 
-    local Remote =
-        Loot:FindFirstChild("CollectLoot")
+    local Remote = Loot:FindFirstChild("CollectLoot")
 
     if Remote and Remote:IsA("RemoteEvent") then
 
         local Success = pcall(function()
-
             Remote:FireServer(Loot)
-
         end)
 
         return Success
-
     end
 
     return false
-
 end
-
---==================================================
--- AUTO LOOT LOOP
---==================================================
 
 local function StartAutoLootLoop()
 
@@ -1016,16 +437,11 @@ local function StartAutoLootLoop()
 
         while AutoLoot and ScreenGui.Parent do
 
-            local Loots =
-                GetLootObjects()
+            local Loots = GetLootObjects()
 
             if #Loots == 0 then
 
-                Status.Text =
-                    "⏳ รอ Loot เกิด..."
-
-                LootSubStatus.Text =
-                    "AUTO LOOT ACTIVE"
+                Status.Text = "⏳ รอ Loot เกิด..."
 
             else
 
@@ -1040,13 +456,10 @@ local function StartAutoLootLoop()
                     if Loot and Loot.Parent then
 
                         Status.Text =
-                            "🧲 ดูด Loot  "
-                            .. Index
-                            .. "/"
-                            .. #Loots
-
-                        LootSubStatus.Text =
-                            "Scanning whole map..."
+                            "🧲 ดูด Loot  " ..
+                            Index ..
+                            "/" ..
+                            #Loots
 
                         if CollectLoot(Loot) then
                             Collected += 1
@@ -1054,36 +467,29 @@ local function StartAutoLootLoop()
 
                     end
 
-                    task.wait(
-                        LOOT_SCAN_DELAY
-                    )
-
+                    task.wait(LOOT_SCAN_DELAY)
                 end
 
-                Status.Text =
-                    "🧲 ดูด Loot แล้ว  "
-                    .. Collected
-                    .. "/"
-                    .. #Loots
-
-                LootSubStatus.Text =
-                    "AUTO LOOT ACTIVE"
-
+                if AutoLoot then
+                    Status.Text =
+                        "🧲 ดูด Loot แล้ว " ..
+                        Collected ..
+                        "/" ..
+                        #Loots
+                end
             end
 
             task.wait(0.05)
-
         end
 
         AutoLootLoopRunning = false
 
     end)
-
 end
 
---==================================================
--- AUTO LOOT BUTTON
---==================================================
+--========================================================--
+-- AUTO LOOT TOGGLE
+--========================================================--
 
 AutoLootButton.MouseButton1Click:Connect(function()
 
@@ -1091,104 +497,217 @@ AutoLootButton.MouseButton1Click:Connect(function()
 
     if AutoLoot then
 
-        AutoLootText.Text =
-            "AUTO LOOT"
-
-        AutoLootState.Text =
-            "ON"
-
-        AutoLootButton.BackgroundColor3 =
-            BLUE
-
-        LootSubStatus.Text =
-            "AUTO LOOT ACTIVE"
+        AutoLootButton.Text = "🟢  AUTO LOOT : ON"
+        AutoLootButton.BackgroundColor3 = BLUE
+        AutoLootButton:SetAttribute("Active", true)
 
         StartAutoLootLoop()
 
     else
 
-        AutoLootText.Text =
-            "AUTO LOOT"
+        AutoLootButton.Text = "🔴  AUTO LOOT : OFF"
+        AutoLootButton.BackgroundColor3 = OFF
+        AutoLootButton:SetAttribute("Active", false)
 
-        AutoLootState.Text =
-            "OFF"
-
-        AutoLootButton.BackgroundColor3 =
-            Color3.fromRGB(45, 55, 70)
-
-        Status.Text =
-            "⛔ AUTO LOOT ปิดอยู่"
-
-        LootSubStatus.Text =
-            "AUTO LOOT DISABLED"
+        Status.Text = "⛔ ปิด AUTO LOOT"
 
     end
+end)
+
+--========================================================--
+-- INTERVAL INPUT
+--========================================================--
+
+IntervalBox.FocusLost:Connect(function()
+
+    local Number = tonumber(IntervalBox.Text)
+
+    if not Number then
+        Number = 1
+    end
+
+    Number = math.max(0.1, Number)
+
+    ClickInterval = Number
+
+    IntervalBox.Text = tostring(Number)
 
 end)
 
---==================================================
--- AFK PROTECTION
---==================================================
+--========================================================--
+-- SELECT CLICK POSITION
+--========================================================--
 
-local function SendAFKActivity()
+SelectButton.MouseButton1Click:Connect(function()
 
-    if not AFK_PROTECTION then
+    SelectingPosition = true
+
+    SelectButton.Text = "CLICK POINT"
+    SelectButton.BackgroundColor3 = Color3.fromRGB(35, 165, 225)
+
+    Status.Text = "🎯 คลิกตรงตำแหน่งที่ต้องการ"
+
+end)
+
+UserInputService.InputBegan:Connect(function(Input, GameProcessed)
+
+    if not SelectingPosition then
+        return
+    end
+
+    if Input.UserInputType ~= Enum.UserInputType.MouseButton1 then
+        return
+    end
+
+    local MousePosition = UserInputService:GetMouseLocation()
+
+    -- ป้องกันการเลือกตำแหน่งบน UI ของเรา
+    local GuiObjects =
+        LocalPlayer.PlayerGui:GetGuiObjectsAtPosition(
+            MousePosition.X,
+            MousePosition.Y
+        )
+
+    local OnOurUI = false
+
+    for _, GuiObject in ipairs(GuiObjects) do
+
+        if GuiObject:IsDescendantOf(ScreenGui) then
+            OnOurUI = true
+            break
+        end
+
+    end
+
+    if OnOurUI then
+        return
+    end
+
+    ClickX = math.floor(MousePosition.X)
+    ClickY = math.floor(MousePosition.Y)
+
+    PositionText.Text =
+        "X: " ..
+        ClickX ..
+        "    Y: " ..
+        ClickY
+
+    Status.Text =
+        "📍 Position saved • " ..
+        ClickX ..
+        ", " ..
+        ClickY
+
+    SelectingPosition = false
+
+    SelectButton.Text = "SELECT"
+    SelectButton.BackgroundColor3 = BLUE
+
+end)
+
+--========================================================--
+-- AUTO CLICK
+--========================================================--
+
+local function DoClick()
+
+    if ClickX <= 0 or ClickY <= 0 then
         return
     end
 
     pcall(function()
 
-        VirtualUser:CaptureController()
+        VirtualInputManager:SendMouseButtonEvent(
+            ClickX,
+            ClickY,
+            0,
+            true,
+            game,
+            0
+        )
 
-        VirtualUser:ClickButton2(
-            Vector2.new(
-                math.random(300, 700),
-                math.random(200, 500)
-            )
+        task.wait(0.02)
+
+        VirtualInputManager:SendMouseButtonEvent(
+            ClickX,
+            ClickY,
+            0,
+            false,
+            game,
+            0
         )
 
     end)
-
-    AFKActivity.Text =
-        "Activity sent • Just Now"
-
-    print(
-        "[MIRACLE AFK] Activity sent"
-    )
-
 end
 
---==================================================
--- ROBLOX IDLE
---==================================================
+--========================================================--
+-- AUTO CLICK TOGGLE
+--========================================================--
 
-LocalPlayer.Idled:Connect(function()
+AutoClickButton.MouseButton1Click:Connect(function()
 
-    SendAFKActivity()
+    if ClickX <= 0 or ClickY <= 0 then
 
+        Status.Text = "⚠ กรุณาเลือกตำแหน่งก่อน"
+
+        return
+    end
+
+    AutoClick = not AutoClick
+
+    if AutoClick then
+
+        AutoClickButton.Text = "🟢  AUTO CLICK : ON"
+        AutoClickButton.BackgroundColor3 = BLUE
+        AutoClickButton:SetAttribute("Active", true)
+
+        Status.Text =
+            "🖱️ Auto Click ON • " ..
+            tostring(ClickInterval) ..
+            "s"
+
+    else
+
+        AutoClickButton.Text = "🔴  AUTO CLICK : OFF"
+        AutoClickButton.BackgroundColor3 = OFF
+        AutoClickButton:SetAttribute("Active", false)
+
+        Status.Text = "⛔ ปิด AUTO CLICK"
+
+    end
 end)
 
---==================================================
--- AFK LOOP
---==================================================
+--========================================================--
+-- AUTO CLICK LOOP
+--========================================================--
 
 task.spawn(function()
 
     while ScreenGui.Parent do
 
-        task.wait(
-            AFK_INTERVAL
-        )
+        if AutoClick then
 
-        SendAFKActivity()
+            DoClick()
 
+            local StartTime = os.clock()
+
+            while AutoClick
+                and os.clock() - StartTime < ClickInterval
+            do
+                task.wait(0.01)
+            end
+
+        else
+
+            task.wait(0.05)
+
+        end
     end
-
 end)
 
---==================================================
+--========================================================--
 -- DRAG SYSTEM
---==================================================
+--========================================================--
 
 local function MakeDraggable(Object, DragHandle)
 
@@ -1198,33 +717,19 @@ local function MakeDraggable(Object, DragHandle)
 
     DragHandle.InputBegan:Connect(function(Input)
 
-        if Input.UserInputType ==
-            Enum.UserInputType.MouseButton1
-
-            or Input.UserInputType ==
-            Enum.UserInputType.Touch
-        then
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
 
             Dragging = true
+            DragStart = Input.Position
+            StartPosition = Object.Position
 
-            DragStart =
-                Input.Position
+        end
+    end)
 
-            StartPosition =
-                Object.Position
+    DragHandle.InputEnded:Connect(function(Input)
 
-            Input.Changed:Connect(function()
-
-                if Input.UserInputState ==
-                    Enum.UserInputState.End
-                then
-
-                    Dragging = false
-
-                end
-
-            end)
-
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+            Dragging = false
         end
 
     end)
@@ -1235,170 +740,84 @@ local function MakeDraggable(Object, DragHandle)
             return
         end
 
-        if Input.UserInputType ~=
-            Enum.UserInputType.MouseMovement
-
-            and Input.UserInputType ~=
-            Enum.UserInputType.Touch
-        then
+        if Input.UserInputType ~= Enum.UserInputType.MouseMovement then
             return
         end
 
-        local Delta =
-            Input.Position - DragStart
+        local Delta = Input.Position - DragStart
 
-        local NewPosition = UDim2.new(
-
+        Object.Position = UDim2.new(
             StartPosition.X.Scale,
-
-            StartPosition.X.Offset
-                + Delta.X,
-
+            StartPosition.X.Offset + Delta.X,
             StartPosition.Y.Scale,
-
-            StartPosition.Y.Offset
-                + Delta.Y
-
+            StartPosition.Y.Offset + Delta.Y
         )
 
-        -- ขยับตัว UI หลัก
-        Object.Position = NewPosition
-
-        -- ขยับ Shadow ตาม Main
         if Object == Main then
 
             Shadow.Position = UDim2.new(
-
-                NewPosition.X.Scale,
-
-                NewPosition.X.Offset - 2,
-
-                NewPosition.Y.Scale,
-
-                NewPosition.Y.Offset - 2
-
+                Object.Position.X.Scale,
+                Object.Position.X.Offset + 4,
+                Object.Position.Y.Scale,
+                Object.Position.Y.Offset + 6
             )
 
         end
-
     end)
-
 end
 
-MakeDraggable(
-    Main,
-    Header
-)
+MakeDraggable(Main, Header)
+MakeDraggable(OpenButton, OpenButton)
 
-MakeDraggable(
-    OpenButton,
-    OpenButton
-)
+--========================================================--
+-- CLOSE / OPEN
+--========================================================--
 
---==================================================
--- MINIMIZE
---==================================================
-
-Minimize.MouseButton1Click:Connect(function()
+CloseButton.MouseButton1Click:Connect(function()
 
     Main.Visible = false
     Shadow.Visible = false
-
     OpenButton.Visible = true
 
 end)
 
---==================================================
--- OPEN
---==================================================
-
 OpenButton.MouseButton1Click:Connect(function()
-
-    OpenButton.Visible = false
 
     Main.Visible = true
     Shadow.Visible = true
-
-    -- จัด Shadow ให้ตรงกับ Main
-    Shadow.Position = UDim2.new(
-
-        Main.Position.X.Scale,
-
-        Main.Position.X.Offset - 2,
-
-        Main.Position.Y.Scale,
-
-        Main.Position.Y.Offset - 2
-
-    )
+    OpenButton.Visible = false
 
 end)
 
---==================================================
+--========================================================--
 -- INITIALIZE
---==================================================
+--========================================================--
 
 AutoLoot = true
 
-AutoLootText.Text =
-    "AUTO LOOT"
+AutoLootButton.Text = "🟢  AUTO LOOT : ON"
+AutoLootButton.BackgroundColor3 = BLUE
+AutoLootButton:SetAttribute("Active", true)
 
-AutoLootState.Text =
-    "ON"
+AutoClick = false
 
-AutoLootButton.BackgroundColor3 =
-    BLUE
+AutoClickButton.Text = "🔴  AUTO CLICK : OFF"
+AutoClickButton.BackgroundColor3 = OFF
+AutoClickButton:SetAttribute("Active", false)
 
-AFK_PROTECTION = true
-
-AFKTitle.Text =
-    "AFK PROTECTION ACTIVE"
-
-AFKActivity.Text =
-    "Activity protection • ON"
-
--- จัด Shadow ตอนเริ่ม
-Shadow.Position = UDim2.new(
-
-    Main.Position.X.Scale,
-
-    Main.Position.X.Offset - 2,
-
-    Main.Position.Y.Scale,
-
-    Main.Position.Y.Offset - 2
-
-)
-
-local InitialLoots =
-    GetLootObjects()
+local InitialLoots = GetLootObjects()
 
 Status.Text =
-    "🧲 Loot ทั้งแมพ: "
-    .. #InitialLoots
-
-LootSubStatus.Text =
-    "AUTO LOOT ACTIVE"
-
-print("================================")
-print("        MIRACLE SYSTEM")
-print("================================")
-print(
-    "Loot:",
+    "🧲 Loot ทั้งแมพ: " ..
     #InitialLoots
-)
-print(
-    "Auto Loot: ON"
-)
-print(
-    "AFK Protection: ALWAYS ON"
-)
+
+print("================================")
+print("       MIRACLE AUTO SYSTEM")
+print("================================")
+print("Loot:", #InitialLoots)
+print("Auto Loot: ON")
+print("Auto Click: OFF")
 print("================================")
 
---==================================================
--- START
---==================================================
-
+-- เริ่ม Auto Loot ทันที
 StartAutoLootLoop()
-
-SendAFKActivity()
