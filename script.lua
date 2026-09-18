@@ -1,7 +1,6 @@
 --========================================================--
 --                 MIRACLE AUTO SYSTEM
---              AUTO CLICK + AUTO LOOT
---             PC + MOBILE SUPPORT
+--          AUTO CLICK + AUTO LOOT + MOBILE
 --========================================================--
 
 local Players = game:GetService("Players")
@@ -20,6 +19,7 @@ local AutoLoot = true
 
 local AutoLootLoopRunning = false
 local SelectingPosition = false
+local SelectingInput = nil
 
 local ClickX = 0
 local ClickY = 0
@@ -28,34 +28,15 @@ local ClickInterval = 1
 local LOOT_SCAN_DELAY = 0.15
 
 --========================================================--
--- REMOVE OLD UI
+-- REMOVE OLD GUI
 --========================================================--
 
 pcall(function()
-    local OldGui = CoreGui:FindFirstChild("MIRACLE_AUTO_CLICKER")
-
-    if OldGui then
-        OldGui:Destroy()
+    local Old = CoreGui:FindFirstChild("MIRACLE_AUTO_CLICKER")
+    if Old then
+        Old:Destroy()
     end
 end)
-
-pcall(function()
-    local OldGui = CoreGui:FindFirstChild("LootTeleportSystem")
-
-    if OldGui then
-        OldGui:Destroy()
-    end
-end)
-
---========================================================--
--- SCREEN GUI
---========================================================--
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MIRACLE_AUTO_CLICKER"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = CoreGui
 
 --========================================================--
 -- COLORS
@@ -74,12 +55,24 @@ local SUBTEXT = Color3.fromRGB(135, 190, 220)
 local OFF = Color3.fromRGB(30, 55, 72)
 
 --========================================================--
+-- SCREEN GUI
+--========================================================--
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MIRACLE_AUTO_CLICKER"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = CoreGui
+
+--========================================================--
 -- SHADOW
 --========================================================--
 
 local Shadow = Instance.new("Frame")
 Shadow.Name = "Shadow"
 Shadow.Size = UDim2.new(0, 360, 0, 360)
+Shadow.Position = UDim2.new(0.5, -176, 0.5, -174)
 Shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 Shadow.BackgroundTransparency = 0.65
 Shadow.BorderSizePixel = 0
@@ -91,7 +84,7 @@ ShadowCorner.CornerRadius = UDim.new(0, 18)
 ShadowCorner.Parent = Shadow
 
 --========================================================--
--- MAIN FRAME
+-- MAIN
 --========================================================--
 
 local Main = Instance.new("Frame")
@@ -260,7 +253,7 @@ SelectButton.TextColor3 = TEXT
 SelectButton.TextSize = 10
 SelectButton.Font = Enum.Font.GothamBold
 SelectButton.AutoButtonColor = false
-SelectButton.ZIndex = 4
+SelectButton.ZIndex = 5
 SelectButton.Parent = PositionCard
 
 local SelectCorner = Instance.new("UICorner")
@@ -272,7 +265,7 @@ SelectCorner.Parent = SelectButton
 --========================================================--
 
 local IntervalLabel = Instance.new("TextLabel")
-IntervalLabel.Size = UDim2.new(0, 110, 0, 38)
+IntervalLabel.Size = UDim2.new(0, 140, 0, 38)
 IntervalLabel.Position = UDim2.new(0, 18, 0, 216)
 IntervalLabel.BackgroundTransparency = 1
 IntervalLabel.Text = "CLICK INTERVAL"
@@ -328,11 +321,6 @@ local AutoClickCorner = Instance.new("UICorner")
 AutoClickCorner.CornerRadius = UDim.new(0, 10)
 AutoClickCorner.Parent = AutoClickButton
 
-local AutoClickStroke = Instance.new("UIStroke")
-AutoClickStroke.Color = BLUE
-AutoClickStroke.Transparency = 0.45
-AutoClickStroke.Parent = AutoClickButton
-
 --========================================================--
 -- AUTO LOOT BUTTON
 --========================================================--
@@ -353,11 +341,6 @@ AutoLootButton.Parent = Main
 local AutoLootCorner = Instance.new("UICorner")
 AutoLootCorner.CornerRadius = UDim.new(0, 10)
 AutoLootCorner.Parent = AutoLootButton
-
-local AutoLootStroke = Instance.new("UIStroke")
-AutoLootStroke.Color = BLUE_LIGHT
-AutoLootStroke.Transparency = 0.35
-AutoLootStroke.Parent = AutoLootButton
 
 --========================================================--
 -- OPEN BUTTON
@@ -385,6 +368,41 @@ local OpenStroke = Instance.new("UIStroke")
 OpenStroke.Color = BLUE_LIGHT
 OpenStroke.Thickness = 2
 OpenStroke.Parent = OpenButton
+
+--========================================================--
+-- POSITION MARKER
+--========================================================--
+
+local PositionMarker = Instance.new("Frame")
+PositionMarker.Name = "ClickMarker"
+PositionMarker.Size = UDim2.new(0, 24, 0, 24)
+PositionMarker.AnchorPoint = Vector2.new(0.5, 0.5)
+PositionMarker.BackgroundTransparency = 1
+PositionMarker.Visible = false
+PositionMarker.ZIndex = 999
+PositionMarker.Parent = ScreenGui
+
+local MarkerStroke = Instance.new("UIStroke")
+MarkerStroke.Color = BLUE_LIGHT
+MarkerStroke.Thickness = 3
+MarkerStroke.Parent = PositionMarker
+
+local MarkerCorner = Instance.new("UICorner")
+MarkerCorner.CornerRadius = UDim.new(1, 0)
+MarkerCorner.Parent = PositionMarker
+
+local MarkerCenter = Instance.new("Frame")
+MarkerCenter.Size = UDim2.new(0, 6, 0, 6)
+MarkerCenter.AnchorPoint = Vector2.new(0.5, 0.5)
+MarkerCenter.Position = UDim2.fromScale(0.5, 0.5)
+MarkerCenter.BackgroundColor3 = BLUE_LIGHT
+MarkerCenter.BorderSizePixel = 0
+MarkerCenter.ZIndex = 1000
+MarkerCenter.Parent = PositionMarker
+
+local MarkerCenterCorner = Instance.new("UICorner")
+MarkerCenterCorner.CornerRadius = UDim.new(1, 0)
+MarkerCenterCorner.Parent = MarkerCenter
 
 --========================================================--
 -- AUTO LOOT
@@ -463,7 +481,7 @@ local function StartAutoLootLoop()
                     if Loot and Loot.Parent then
 
                         Status.Text =
-                            "🧲 ดูด Loot  " ..
+                            "🧲 ดูด Loot " ..
                             Index ..
                             "/" ..
                             #Loots
@@ -471,7 +489,6 @@ local function StartAutoLootLoop()
                         if CollectLoot(Loot) then
                             Collected += 1
                         end
-
                     end
 
                     task.wait(LOOT_SCAN_DELAY)
@@ -489,7 +506,6 @@ local function StartAutoLootLoop()
             end
 
             task.wait(0.05)
-
         end
 
         AutoLootLoopRunning = false
@@ -509,7 +525,6 @@ AutoLootButton.Activated:Connect(function()
 
         AutoLootButton.Text = "🟢  AUTO LOOT : ON"
         AutoLootButton.BackgroundColor3 = BLUE
-        AutoLootButton:SetAttribute("Active", true)
 
         StartAutoLootLoop()
 
@@ -517,16 +532,14 @@ AutoLootButton.Activated:Connect(function()
 
         AutoLootButton.Text = "🔴  AUTO LOOT : OFF"
         AutoLootButton.BackgroundColor3 = OFF
-        AutoLootButton:SetAttribute("Active", false)
 
         Status.Text = "⛔ ปิด AUTO LOOT"
 
     end
-
 end)
 
 --========================================================--
--- INTERVAL INPUT
+-- INTERVAL
 --========================================================--
 
 IntervalBox.FocusLost:Connect(function()
@@ -540,7 +553,6 @@ IntervalBox.FocusLost:Connect(function()
     Number = math.max(0.1, Number)
 
     ClickInterval = Number
-
     IntervalBox.Text = tostring(Number)
 
 end)
@@ -549,24 +561,18 @@ end)
 -- SELECT POSITION
 --========================================================--
 
-SelectButton.Activated:Connect(function()
+local function FinishSelecting()
 
-    SelectingPosition = true
+    SelectingPosition = false
+    SelectingInput = nil
 
-    -- ทำให้ปุ่มรู้ว่ากำลังเลือกตำแหน่ง
-    SelectButton.Text = "TAP / CLICK"
-    SelectButton.BackgroundColor3 =
-        Color3.fromRGB(35, 165, 225)
+    SelectButton.Text = "SELECT"
+    SelectButton.BackgroundColor3 = BLUE
 
-    Status.Text =
-        "🎯 แตะ/คลิกตรงตำแหน่งที่ต้องการ"
+    Main.Visible = true
+    Shadow.Visible = true
 
-end)
-
---========================================================--
--- SAVE POSITION
--- รองรับทั้ง PC และ MOBILE
---========================================================--
+end
 
 local function SaveClickPosition(Position)
 
@@ -574,12 +580,44 @@ local function SaveClickPosition(Position)
         return
     end
 
-    ClickX = math.floor(Position.X)
-    ClickY = math.floor(Position.Y)
+    --------------------------------------------------------
+    -- รับตำแหน่งจาก Touch / Mouse โดยตรง
+    --------------------------------------------------------
 
-    if ClickX <= 0 or ClickY <= 0 then
-        return
+    local X = Position.X
+    local Y = Position.Y
+
+    --------------------------------------------------------
+    -- ใช้ขนาดหน้าจอจริง
+    --------------------------------------------------------
+
+    local Camera = workspace.CurrentCamera
+
+    if Camera then
+
+        local ViewportSize = Camera.ViewportSize
+
+        -- ป้องกันค่าหลุดขอบ
+        X = math.clamp(X, 0, ViewportSize.X)
+        Y = math.clamp(Y, 0, ViewportSize.Y)
+
     end
+
+    ClickX = math.floor(X + 0.5)
+    ClickY = math.floor(Y + 0.5)
+
+    --------------------------------------------------------
+    -- แสดง Marker ตรงตำแหน่งที่เลือก
+    --------------------------------------------------------
+
+    PositionMarker.Position =
+        UDim2.fromOffset(ClickX, ClickY)
+
+    PositionMarker.Visible = true
+
+    --------------------------------------------------------
+    -- แสดงค่า
+    --------------------------------------------------------
 
     PositionText.Text =
         "X: " ..
@@ -588,19 +626,46 @@ local function SaveClickPosition(Position)
         ClickY
 
     Status.Text =
-        "📍 Position saved • " ..
+        "📍 เลือกแล้ว  X:" ..
         ClickX ..
-        ", " ..
+        " Y:" ..
         ClickY
 
-    SelectingPosition = false
-
-    SelectButton.Text = "SELECT"
-    SelectButton.BackgroundColor3 = BLUE
+    FinishSelecting()
 
 end
 
-UserInputService.InputBegan:Connect(function(Input)
+SelectButton.Activated:Connect(function()
+
+    if SelectingPosition then
+        return
+    end
+
+    SelectingPosition = true
+    SelectingInput = nil
+
+    SelectButton.Text = "TAP / CLICK"
+    SelectButton.BackgroundColor3 =
+        Color3.fromRGB(35, 165, 225)
+
+    Status.Text =
+        "🎯 แตะตำแหน่งที่ต้องการบนหน้าจอ"
+
+    --------------------------------------------------------
+    -- ซ่อน UI
+    --------------------------------------------------------
+
+    Main.Visible = false
+    Shadow.Visible = false
+    OpenButton.Visible = false
+
+end)
+
+--========================================================--
+-- TOUCH / MOUSE SELECT
+--========================================================--
+
+UserInputService.InputBegan:Connect(function(Input, GameProcessed)
 
     if not SelectingPosition then
         return
@@ -613,35 +678,13 @@ UserInputService.InputBegan:Connect(function(Input)
         return
     end
 
-    local Position = Input.Position
-
-    -- ตรวจสอบว่ากดโดน UI ของเราหรือไม่
-    local OnOurUI = false
-
-    pcall(function()
-
-        local GuiObjects =
-            LocalPlayer.PlayerGui:GetGuiObjectsAtPosition(
-                Position.X,
-                Position.Y
-            )
-
-        for _, GuiObject in ipairs(GuiObjects) do
-
-            if GuiObject:IsDescendantOf(ScreenGui) then
-
-                OnOurUI = true
-                break
-
-            end
-        end
-    end)
-
-    if OnOurUI then
+    if SelectingInput then
         return
     end
 
-    SaveClickPosition(Position)
+    SelectingInput = Input
+
+    SaveClickPosition(Input.Position)
 
 end)
 
@@ -689,7 +732,7 @@ AutoClickButton.Activated:Connect(function()
     if ClickX <= 0 or ClickY <= 0 then
 
         Status.Text =
-            "⚠ กรุณาเลือกตำแหน่งก่อน"
+            "⚠ กรุณากด SELECT ก่อน"
 
         return
     end
@@ -701,8 +744,8 @@ AutoClickButton.Activated:Connect(function()
         AutoClickButton.Text =
             "🟢  AUTO CLICK : ON"
 
-        AutoClickButton.BackgroundColor3 = BLUE
-        AutoClickButton:SetAttribute("Active", true)
+        AutoClickButton.BackgroundColor3 =
+            BLUE
 
         Status.Text =
             "🖱️ Auto Click ON • " ..
@@ -714,8 +757,8 @@ AutoClickButton.Activated:Connect(function()
         AutoClickButton.Text =
             "🔴  AUTO CLICK : OFF"
 
-        AutoClickButton.BackgroundColor3 = OFF
-        AutoClickButton:SetAttribute("Active", false)
+        AutoClickButton.BackgroundColor3 =
+            OFF
 
         Status.Text =
             "⛔ ปิด AUTO CLICK"
@@ -757,7 +800,7 @@ task.spawn(function()
 end)
 
 --========================================================--
--- MOBILE + PC DRAG SYSTEM
+-- DRAG SYSTEM PC + MOBILE
 --========================================================--
 
 local function MakeDraggable(Object, DragHandle)
@@ -767,36 +810,22 @@ local function MakeDraggable(Object, DragHandle)
     local StartPosition = nil
     local ActiveInput = nil
 
-    local function BeginDrag(Input)
-
-        if Dragging then
-            return
-        end
-
-        Dragging = true
-        ActiveInput = Input
-        DragStart = Input.Position
-        StartPosition = Object.Position
-
-    end
-
-    local function EndDrag(Input)
-
-        if ActiveInput == Input then
-
-            Dragging = false
-            ActiveInput = nil
-
-        end
-
-    end
-
     DragHandle.InputBegan:Connect(function(Input)
 
-        if Input.UserInputType == Enum.UserInputType.MouseButton1
-            or Input.UserInputType == Enum.UserInputType.Touch then
+        local Type = Input.UserInputType
 
-            BeginDrag(Input)
+        if Type == Enum.UserInputType.MouseButton1
+            or Type == Enum.UserInputType.Touch then
+
+            if Dragging then
+                return
+            end
+
+            Dragging = true
+            ActiveInput = Input
+
+            DragStart = Input.Position
+            StartPosition = Object.Position
 
         end
 
@@ -804,10 +833,10 @@ local function MakeDraggable(Object, DragHandle)
 
     DragHandle.InputEnded:Connect(function(Input)
 
-        if Input.UserInputType == Enum.UserInputType.MouseButton1
-            or Input.UserInputType == Enum.UserInputType.Touch then
+        if Input == ActiveInput then
 
-            EndDrag(Input)
+            Dragging = false
+            ActiveInput = nil
 
         end
 
@@ -819,9 +848,10 @@ local function MakeDraggable(Object, DragHandle)
             return
         end
 
-        if Input.UserInputType ~= Enum.UserInputType.MouseMovement
-            and Input.UserInputType ~= Enum.UserInputType.Touch then
+        local Type = Input.UserInputType
 
+        if Type ~= Enum.UserInputType.MouseMovement
+            and Type ~= Enum.UserInputType.Touch then
             return
         end
 
@@ -853,6 +883,7 @@ local function MakeDraggable(Object, DragHandle)
         end
 
     end)
+
 end
 
 MakeDraggable(Main, Header)
@@ -887,29 +918,19 @@ end)
 --========================================================--
 
 AutoLoot = true
+AutoClick = false
 
 AutoLootButton.Text =
     "🟢  AUTO LOOT : ON"
 
-AutoLootButton.BackgroundColor3 = BLUE
-AutoLootButton:SetAttribute("Active", true)
-
-AutoClick = false
+AutoLootButton.BackgroundColor3 =
+    BLUE
 
 AutoClickButton.Text =
     "🔴  AUTO CLICK : OFF"
 
-AutoClickButton.BackgroundColor3 = OFF
-AutoClickButton:SetAttribute("Active", false)
-
--- จัด Shadow ให้ตรงกับ Main ตอนเริ่ม
-Shadow.Position = UDim2.new(
-    Main.Position.X.Scale,
-    Main.Position.X.Offset + 4,
-
-    Main.Position.Y.Scale,
-    Main.Position.Y.Offset + 6
-)
+AutoClickButton.BackgroundColor3 =
+    OFF
 
 local InitialLoots = GetLootObjects()
 
@@ -923,8 +944,8 @@ print("================================")
 print("Loot:", #InitialLoots)
 print("Auto Loot: ON")
 print("Auto Click: OFF")
-print("PC + MOBILE: ON")
+print("Mobile Touch: ENABLED")
+print("Position Marker: ENABLED")
 print("================================")
 
--- เริ่ม Auto Loot ทันที
 StartAutoLootLoop()
